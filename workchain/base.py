@@ -17,14 +17,12 @@ from aiida.work.workchain import ToContext, if_, while_
 
 # imports of common workchain utils. these might be independent of the actual code
 # and probably could be part of aiida-core?
-
 from aiida_quantumespresso.common.exceptions import UnexpectedCalculationFailure
 from aiida_quantumespresso.common.workchain.utils import ErrorHandlerReport
 from aiida_quantumespresso.common.workchain.utils import register_error_handler
 from aiida_quantumespresso.common.workchain.base.restart import BaseRestartWorkChain
 
 # calculation specific utils, which have to be implemented for each plugin
-
 from aiida_vasp.utils.pseudopotential import validate_and_prepare_pseudos_inputs
 
 
@@ -42,14 +40,7 @@ class VASPBaseWorkChain(BaseRestartWorkChain):
     def __init__(self, *args, **kwargs):
         super(VASPBaseWorkChain, self).__init__(*args, **kwargs)
 
-#        self.defaults = AttributeDict({
-#            'qe': qe_defaults,
-#            'delta_threshold_degauss': 30,
-#            'delta_factor_degauss': 0.1,
-#            'delta_factor_mixing_beta': 0.8,
-#            'delta_factor_max_seconds': 0.95,
-#        })
-
+        
     @classmethod
     def define(cls, spec):
         super(VASPBaseWorkChain, cls).define(spec)
@@ -93,21 +84,12 @@ class VASPBaseWorkChain(BaseRestartWorkChain):
             'kpoints': self.inputs.kpoints,
             'parameters': self.inputs.parameters.get_dict()
         })
-
-#        QE specific information
-
-#        if 'CONTROL'not in self.ctx.inputs_raw.parameters:
-#            self.ctx.inputs_raw.parameters['CONTROL'] = {}
-
-#        if 'calculation' not in self.ctx.inputs_raw.parameters['CONTROL']:
-#            self.ctx.inputs_raw.parameters['CONTROL']['calculation'] = 'scf'
+        
 
         if 'parent_folder' in self.inputs:
             self.ctx.inputs_raw.parent_folder = self.inputs.parent_folder
-#            self.ctx.inputs_raw.parameters['CONTROL']['restart_mode'] = 'restart'
         else:
             self.ctx.inputs_raw.parent_folder = None
-#            self.ctx.inputs_raw.parameters['CONTROL']['restart_mode'] = 'from_scratch'
 
         if 'settings' in self.inputs:
             self.ctx.inputs_raw.settings = self.inputs.settings.get_dict()
@@ -122,19 +104,18 @@ class VASPBaseWorkChain(BaseRestartWorkChain):
         if 'vdw_table' in self.inputs:
             self.ctx.inputs_raw.vdw_table = self.inputs.vdw_table
 
-        # Either automatic_parallelization or options has to be specified
-        if not any([key in self.inputs for key in ['options', 'automatic_parallelization']]):
-            self.abort_nowait('you have to specify either the options or automatic_parallelization input')
+        # Options has to be specified
+        if not any([key in self.inputs for key in ['options']]):
+            self.abort_nowait('you have to specify the options input')
             return
 
-        # If automatic parallelization is not enabled, we better make sure that the options satisfy minimum requirements
-        if 'automatic_parallelization' not in self.inputs:
-            num_machines = self.ctx.inputs_raw['_options'].get('resources', {}).get('num_machines', None)
-            max_wallclock_seconds = self.ctx.inputs_raw['_options'].get('max_wallclock_seconds', None)
+        # We better make sure that the options satisfy minimum requirements
+        num_machines = self.ctx.inputs_raw['_options'].get('resources', {}).get('num_machines', None)
+        max_wallclock_seconds = self.ctx.inputs_raw['_options'].get('max_wallclock_seconds', None)
 
-            if num_machines is None or max_wallclock_seconds is None:
-                self.abort_nowait("no automatic_parallelization requested, but the options do not specify both '{}' and '{}'"
-                    .format('num_machines', 'max_wallclock_seconds'))
+        if num_machines is None or max_wallclock_seconds is None:
+            self.abort_nowait("no automatic_parallelization requested, but the options do not specify both '{}' and '{}'"
+                .format('num_machines', 'max_wallclock_seconds'))
 
         # Validate the inputs related to pseudopotentials
         structure = self.inputs.structure
@@ -155,7 +136,6 @@ class VASPBaseWorkChain(BaseRestartWorkChain):
         Prepare the inputs for the next calculation
         """
         if self.ctx.restart_calc:
-#            self.ctx.inputs.parameters['CONTROL']['restart_mode'] = 'restart'
             self.ctx.inputs.parent_folder = self.ctx.restart_calc.out.remote_folder
 
     def _prepare_process_inputs(self, inputs):
